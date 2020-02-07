@@ -160,7 +160,7 @@ void makedepthmapforbfs(const size_t nlocalverts,const int64_t root,int64_t * co
 
 	newvisits=1;
 	prevlevel=0.0;
-	aml_register_handler(frompredhndl,1);
+	aml_register_handler(FROMPREDHNDL);
 
 	while(newvisits!=0) {
 		newvisits=0;
@@ -193,7 +193,7 @@ vweights=weights;
 #else
 		vdegrees=xcalloc(nlocalverts,sizeof(int));
 
-		aml_register_handler(vhalfedgehndl,1);
+		aml_register_handler(VHALFEDGEHNDL);
 
 		int numiters=ITERATE_TUPLE_GRAPH_BLOCK_COUNT(tg);
 		// First pass : calculate degrees of each vertex
@@ -221,7 +221,7 @@ vweights=weights;
 #ifdef SSSP
 		vweights = xmalloc(4*vrowstarts[nlocalverts]);
 #endif
-		aml_register_handler(vfulledgehndl,1);
+		aml_register_handler(VFULLEDGEHNDL);
 		//Second pass , actual data transfer: placing edges to its places in vcolumn
 		ITERATE_TUPLE_GRAPH_BEGIN(tg, buf, bufsize,wbuf) {
 			ptrdiff_t j;
@@ -278,7 +278,7 @@ vweights=weights;
 		else confirmed[vloc]=1;
 	}
 
-	aml_register_handler(edgepreddisthndl,1);
+	aml_register_handler(EDGEPREDDISTHNDL);
 	nedges_traversed=0;
 
 	for (i = 0; i < nlocalverts; ++i)

@@ -70,7 +70,7 @@ void make_graph_data_structure(const tuple_graph* const tg) {
 	rowstarts=g.rowstarts;
 
 	visited_size = (g.nlocalverts + ulong_bits - 1) / ulong_bits;
-	aml_register_handler(visithndl,1);
+	aml_register_handler(VISITHNDL);
 	q1 = xmalloc(g.nlocalverts*sizeof(int)); //100% of vertexes
 	q2 = xmalloc(g.nlocalverts*sizeof(int));
 	for(i=0;i<g.nlocalverts;i++) q1[i]=0,q2[i]=0; //touch memory
@@ -82,7 +82,7 @@ void run_bfs(int64_t root, int64_t* pred) {
 	long sum;
 	unsigned int i,j,k,lvl=1;
 	pred_glob=pred;
-	aml_register_handler(visithndl,1);
+	aml_register_handler(VISITHNDL);
 
 	CLEAN_VISITED();
 

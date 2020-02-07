@@ -82,7 +82,7 @@ void convert_graph_to_oned_csr(const tuple_graph* const tg, oned_csr_graph* cons
 	nvert+=1;
 	degrees=xcalloc(nvert,sizeof(int));
 
-	aml_register_handler(halfedgehndl,1);
+	aml_register_handler(HALFEDGEHNDL);
 	int numiters=ITERATE_TUPLE_GRAPH_BLOCK_COUNT(tg);
 	// First pass : calculate degrees of each vertex
 	ITERATE_TUPLE_GRAPH_BEGIN(tg, buf, bufsize,wbuf) {
@@ -157,7 +157,7 @@ void convert_graph_to_oned_csr(const tuple_graph* const tg, oned_csr_graph* cons
 	//long allocatededges=colalloc;
 	g->column = column;
 
-	aml_register_handler(fulledgehndl,1);
+	aml_register_handler(FULLEDGEHNDL);
 	//Next pass , actual data transfer: placing edges to its places in column and hcolumn
 	ITERATE_TUPLE_GRAPH_BEGIN(tg, buf, bufsize,wbuf) {
 		ptrdiff_t j;

@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include "aml.h"
 
 #ifdef __APPLE__
 #define SYSCTL_CORE_COUNT   "machdep.cpu.core_count"
@@ -72,7 +73,7 @@ int pthread_setaffinity_np(pthread_t thread, size_t cpu_size,
   return 0;
 }
 #else
-#include <malloc.h>
+// #include <malloc.h>
 #endif
 
 #ifdef __clang__
@@ -112,7 +113,7 @@ volatile static int ack=0;
 
 volatile static int inbarrier=0;
 
-static void (*aml_handlers[256]) (int,void *,int); //pointers to user-provided AM handlers
+static int aml_current_handler=0; //user-provided AM handlers
 
 //internode comm (proc number X from each group)
 //intranode comm (all cores of one nodegroup)
@@ -145,7 +146,7 @@ inline void aml_send_intra(void *srcaddr, int type, int length, int local ,int f
 void aml_finalize(void);
 void aml_barrier(void);
 
-SOATTR void aml_register_handler(void(*f)(int,void*,int),int n) { aml_barrier(); aml_handlers[n]=f; aml_barrier(); }
+SOATTR void aml_register_handler(int hndl) { aml_barrier(); aml_current_handler=hndl; aml_barrier(); }
 
 struct __attribute__((__packed__)) hdr { //header of internode message
 	ushort sz;
@@ -153,6 +154,38 @@ struct __attribute__((__packed__)) hdr { //header of internode message
 	char routing;
 };
 //process internode messages
+
+SOATTR void	aml_call_handler(int from, void* message, int length) {
+	switch(aml_current_handler)	{
+		case FROMPREDHNDL:
+			frompredhndl(from, message,	length);
+			break;
+		case VHALFEDGEHND:
+			vhalfedgehndl(from,	message, length);
+			break;
+		case VFULLEDGEHNDL:
+			vfulledgehndl(from,	message, length);
+			break;
+		case EDGEPREDDISTHNDL:
+			edgepreddisthndl(from, message,	length);
+			break;
+		case HALFEDGEHNDL:
+			halfedgehndl(from, message,	length);
+			break;
+		case FULLEDGEHNDL:
+			fulledgehndl(from, message,	length);
+			break;
+		case VISITHNDL:
+			visithndl(from,	message, length);
+			break;
+#ifdef SSSP
+		case RELAXHNDL:
+			relaxhndl(from,	message, length);
+			break;
+#endif
+	}
+}
+
 static void process(int fromgroup,int length ,char* message) {
 	int i = 0;
 	int from = PROC_FROM_GROUPLOCAL(fromgroup,mylocal);
@@ -163,7 +196,9 @@ static void process(int fromgroup,int length ,char* message) {
 		int hndl=h->hndl;
 		int destlocal = LOCAL_FROM_PROC(h->routing);
 		if(destlocal == mylocal)
-			aml_handlers[hndl](from,m+sizeof(struct hdr),hsz);
+		{
+			aml_call_handler(from, m+sizeof(struct hdr), hsz);
+        }
 		else
 			aml_send_intra(m+sizeof(struct hdr),hndl,hsz,destlocal,from);
 		i += hsz + sizeof(struct hdr);
@@ -183,7 +218,7 @@ static void process_intra(int fromlocal,int length ,char* message) {
 		struct hdri *h = m;
 		int hsz=h->sz;
 		int hndl=h->hndl;
-		aml_handlers[hndl](PROC_FROM_GROUPLOCAL((int)(h->routing),fromlocal),m+sizeof(struct hdri),hsz);
+		aml_call_handler(PROC_FROM_GROUPLOCAL((int)(h->routing),fromlocal), m+sizeof(struct hdri), hsz);
 		i += sizeof(struct hdri) + hsz;
 	}
 }
@@ -284,7 +319,7 @@ inline void aml_send_intra(void *src, int type, int length, int local, int from)
 
 SOATTR void aml_send(void *src, int type,int length, int node ) {
 	if ( node == myproc )
-		return aml_handlers[type](myproc,src,length);
+		return aml_call_handler(myproc,src,length);
 
 	int group = GROUP_FROM_PROC(node);
 	int local = LOCAL_FROM_PROC(node);
